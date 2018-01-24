@@ -64,7 +64,7 @@ module Mongoid
 
       def_delegators :@model, :slug_scope, :reflect_on_association, :read_attribute,
                      :check_against_id, :slug_reserved_words, :slug_url_builder, :collection_name,
-                     :embedded?, :reflect_on_all_associations, :slug_by_model_type, :slug_max_length
+                     :embedded?, :reflect_on_all_association, :slug_by_model_type, :slug_max_length
 
       def initialize(model)
         @model = model
@@ -73,7 +73,7 @@ module Mongoid
       end
 
       def metadata
-        @model.respond_to?(:relation_metadata) ? @model.relation_metadata : @model.metadata
+        @model.respond_to?(:relation_metadata) ? @model.relation_metadata : @model._association
       end
 
       def find_unique(attempt = nil)
@@ -96,9 +96,7 @@ module Mongoid
             where_hash[scope] = model.try(:read_attribute, scope)
           end
 
-          if slug_by_model_type
-            where_hash[:_type] = model.try(:read_attribute, :_type)
-          end
+          where_hash[:_type] = model.try(:read_attribute, :_type) if slug_by_model_type
 
           @state = SlugState.new @_slug, uniqueness_scope.unscoped.where(where_hash), escaped_pattern
 
@@ -127,7 +125,7 @@ module Mongoid
       # index to match /^.../ pattern.
       # Use Regexp::Raw to avoid the multiline option when querying the server.
       def regex_for_slug
-        if embedded? || Mongoid::Compatibility::Version.mongoid3? || Mongoid::Compatibility::Version.mongoid4?
+        if embedded?
           Regexp.new(escaped_pattern)
         else
           BSON::Regexp::Raw.new(escaped_pattern)
@@ -150,15 +148,13 @@ module Mongoid
         end
 
         if embedded?
-          parent_metadata = reflect_on_all_associations(:embedded_in)[0]
+          parent_metadata = reflect_on_all_association(:embedded_in)[0]
           return model._parent.send(parent_metadata.inverse_of || self.metadata.name)
         end
 
         # unless embedded or slug scope, return the deepest document superclass
         appropriate_class = model.class
-        while appropriate_class.superclass.include?(Mongoid::Document)
-          appropriate_class = appropriate_class.superclass
-        end
+        appropriate_class = appropriate_class.superclass while appropriate_class.superclass.include?(Mongoid::Document)
         appropriate_class
       end
     end

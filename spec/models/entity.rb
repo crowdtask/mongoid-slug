@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 class Entity
   include Mongoid::Document
   include Mongoid::Slug

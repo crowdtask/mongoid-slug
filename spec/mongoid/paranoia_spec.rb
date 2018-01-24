@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 require 'spec_helper'
 
 describe 'Mongoid::Paranoia with Mongoid::Slug' do
